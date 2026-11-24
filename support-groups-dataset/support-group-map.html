@@ -1,0 +1,124 @@
+<title>PASD Support Group Finder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@500;700&display=swap">
+<style>
+/* Layout: filter rail on top, schematic map + readable list side by side, stacking on phones */
+:root{
+  --bg:#f6f8f7; --surface:#ffffff; --fg:#17231f; --muted:#51605a; --line:#cdd8d3;
+  --accent:#1f6f54; --accent-fg:#ffffff; --land:#e6ede9; --sea:#d6e6ee; --virtual:#7a4ea3; --new:#c2551f;
+  --display:"Lexend",system-ui,sans-serif; --body:"Atkinson Hyperlegible",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111916;--surface:#18221e;--fg:#e8efec;--muted:#a3b2ab;--line:#33433c;--accent:#5fc39a;--accent-fg:#0c1512;--land:#1f2c27;--sea:#14232b;--virtual:#b893de;--new:#f08a55;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111916;--surface:#18221e;--fg:#e8efec;--muted:#a3b2ab;--line:#33433c;--accent:#5fc39a;--accent-fg:#0c1512;--land:#1f2c27;--sea:#14232b;--virtual:#b893de;--new:#f08a55;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.5}
+.wrap{max-width:1200px;margin:0 auto;padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:20px}
+h1{font-family:var(--display);font-size:2rem;margin:0;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:65ch}
+.draft{display:inline-block;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--new);margin-bottom:4px}
+.filters{display:grid;gap:12px}
+.fgroup{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fgroup .lab{font-weight:700;min-width:6.5rem}
+.chip{font:inherit;font-size:1rem;min-height:48px;padding:8px 16px;border-radius:999px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:700}
+.chip:focus-visible,.card:focus-visible,.dot:focus-visible{outline:3px solid var(--new);outline-offset:3px}
+.main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.main{grid-template-columns:1fr}}
+.mapbox{background:var(--sea);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:sticky;top:12px}
+svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:14px;padding:10px 14px;background:var(--surface);border-top:1px solid var(--line);font-size:.9rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.count{font-family:var(--display);font-weight:500;margin:0 0 8px}
+.list{display:grid;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:4px;min-width:0}
+.card.hl{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.card h3{font-family:var(--display);font-size:1.15rem;margin:0}
+.card .when{font-weight:700}
+.card .meta{color:var(--muted);font-size:.95rem}
+.pill{display:inline-block;font-size:.8rem;font-weight:700;padding:2px 10px;border-radius:999px;border:1px solid currentColor;margin-right:6px}
+.pill.v{color:var(--virtual)} .pill.p{color:var(--accent)} .pill.n{color:var(--new)}
+.notes{font-size:.9rem;color:var(--new)}
+.findings{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 20px}
+.findings h2{font-family:var(--display);font-size:1.2rem;margin:0 0 8px}
+.findings ul{margin:0;padding-left:1.2em;display:grid;gap:6px}
+@media (prefers-reduced-motion:no-preference){.card{transition:box-shadow .15s}}
+</style>
+<div class="wrap">
+  <header>
+    <span class="draft">Draft v0.1 · Biokind × PASD</span>
+    <h1>Find a Parkinson's support group</h1>
+    <p class="lede">21 groups from the PASD support group page (plus the new Chula Vista Central group). Pick a region, day or format. The map is a simple sketch of the county coastline, not a street map.</p>
+  </header>
+  <section class="filters" aria-label="Filters">
+    <div class="fgroup" role="group" aria-label="Region" id="f-region"><span class="lab">Where</span></div>
+    <div class="fgroup" role="group" aria-label="Day" id="f-day"><span class="lab">Day</span></div>
+    <div class="fgroup" role="group" aria-label="Who it's for" id="f-aud"><span class="lab">Who</span></div>
+  </section>
+  <div class="main">
+    <div class="mapbox">
+      <svg id="map" viewBox="0 0 600 620" role="img" aria-label="Schematic map of in-person support group locations"></svg>
+      <div class="legend"><span><i style="background:var(--accent)"></i>In person</span><span><i style="background:var(--new)"></i>New group</span><span><i style="background:var(--virtual)"></i>Virtual groups are listed, not mapped</span></div>
+    </div>
+    <div>
+      <p class="count" id="count" aria-live="polite"></p>
+      <div class="list" id="list"></div>
+    </div>
+  </div>
+  <section class="findings">
+    <h2>First observations (draft)</h2>
+    <ul>
+      <li>9 of 21 groups are virtual. In-person groups cluster on the coast and in the South Bay.</li>
+      <li>Likely gaps: no in-person group listed for inland North County (Escondido, San Marcos, Vista), the Ramona and Alpine backcountry, or El Cajon proper.</li>
+      <li>9 groups meet on Wednesdays. Only one evening option (YOPD Care Partners, 6pm) and one Saturday option (quarterly), which is hard for working care partners.</li>
+      <li>Only one Spanish-language group (Chula Vista).</li>
+      <li>Website region tags are inconsistent: almost every group is also tagged "San Diego – City", and some in-person groups (Santee, Español) have no area tag.</li>
+    </ul>
+  </section>
+</div>
+<script>
+const DATA = [{"EVENT_NAME": "Atypical PD for Caregivers", "GROUP_ORG": "Atypical Parkinson's Support", "EVENT_TYPE": "Virtual", "VENUE_NAME": "Zoom", "STREET_ADDRESS": "virtual", "ZIP_CODE": "", "CITY": "", "FREQUENCY_RAW": "1st Wednesday of every month, 11am-1pm", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Wednesday", "WEEK_OF_MONTH": "1st", "TIME_LOCAL": "11:00-13:00", "FORMAT": "Virtual", "AUDIENCE": "Care partners only (atypical PD: PSP, CBD, MSA, LBD)", "LANGUAGE": "English", "REGION": "Virtual", "CONTACT_NAME": "Sharon Connor; Bill Leigh", "CONTACT_PHONE": "619-306-7160", "LAT": "", "LON": "", "NOTES": "Listing header email (sharonconnor@) differs from body (sharoncconnor@); confirm"}, {"EVENT_NAME": "Chula Vista", "GROUP_ORG": "UCSD Parkinson's Support Group", "EVENT_TYPE": "Senior center", "VENUE_NAME": "Norman Park Senior Center", "STREET_ADDRESS": "270 F Street", "ZIP_CODE": "91910", "CITY": "Chula Vista", "FREQUENCY_RAW": "1st Wednesday, 1:00-3:00pm", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Wednesday", "WEEK_OF_MONTH": "1st", "TIME_LOCAL": "13:00-15:00", "FORMAT": "In-person", "AUDIENCE": "PwP and care partners", "LANGUAGE": "English", "REGION": "South Bay", "CONTACT_NAME": "Adriana Gonzalez", "CONTACT_PHONE": "", "LAT": 32.6416, "LON": -117.0785, "NOTES": ""}, {"EVENT_NAME": "Chula Vista Central", "GROUP_ORG": "", "EVENT_TYPE": "Church", "VENUE_NAME": "First United Methodist Church", "STREET_ADDRESS": "1200 E H Street", "ZIP_CODE": "91910", "CITY": "Chula Vista", "FREQUENCY_RAW": "", "FREQUENCY_CLEAN": "TBD", "DAY_OF_WEEK": "", "WEEK_OF_MONTH": "", "TIME_LOCAL": "", "FORMAT": "In-person", "AUDIENCE": "TBD", "LANGUAGE": "English", "REGION": "South Bay", "CONTACT_NAME": "Anna Silsbee", "CONTACT_PHONE": "", "LAT": 32.6385, "LON": -117.00967, "NOTES": "NEW group; meeting schedule needed from PASD"}, {"EVENT_NAME": "East County Live", "GROUP_ORG": "East County Parkinson's Support Group", "EVENT_TYPE": "Church", "VENUE_NAME": "United Church of Christ of La Mesa (Friendship Hall)", "STREET_ADDRESS": "5940 Kelton Avenue", "ZIP_CODE": "91942", "CITY": "La Mesa", "FREQUENCY_RAW": "4th Wednesdays of the month, 1:30-3:30pm", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Wednesday", "WEEK_OF_MONTH": "4th", "TIME_LOCAL": "13:30-15:30", "FORMAT": "In-person", "AUDIENCE": "PwP and care partners", "LANGUAGE": "English", "REGION": "East County", "CONTACT_NAME": "", "CONTACT_PHONE": "619-447-2855", "LAT": 32.78675, "LON": -117.01804, "NOTES": ""}, {"EVENT_NAME": "Español – Chula Vista", "GROUP_ORG": "Compañeros de Parkinson (Juan Carlos Organization)", "EVENT_TYPE": "Senior center", "VENUE_NAME": "Norman Park Senior Center (conference room)", "STREET_ADDRESS": "270 F Street", "ZIP_CODE": "91910", "CITY": "Chula Vista", "FREQUENCY_RAW": "11:00am primer jueves de cada mes / first Thursday of every month", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Thursday", "WEEK_OF_MONTH": "1st", "TIME_LOCAL": "11:00", "FORMAT": "In-person", "AUDIENCE": "PwP and care partners", "LANGUAGE": "Spanish", "REGION": "South Bay", "CONTACT_NAME": "Lisbeth Garces", "CONTACT_PHONE": "619-971-3904", "LAT": 32.6416, "LON": -117.0785, "NOTES": "Site tags it only 'San Diego – City'; REGION set to South Bay by us"}, {"EVENT_NAME": "Fallbrook", "GROUP_ORG": "North County Parkinson's Support Group (NCPSG)", "EVENT_TYPE": "Health center", "VENUE_NAME": "Fallbrook Regional Health & Wellness Center", "STREET_ADDRESS": "1636 E. Mission Rd", "ZIP_CODE": "92028", "CITY": "Fallbrook", "FREQUENCY_RAW": "Fourth Friday of each month, 10am-Noon", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Friday", "WEEK_OF_MONTH": "4th", "TIME_LOCAL": "10:00-12:00", "FORMAT": "In-person", "AUDIENCE": "PwP and care partners", "LANGUAGE": "English", "REGION": "North County", "CONTACT_NAME": "Irene Miller", "CONTACT_PHONE": "760-731-0171", "LAT": 33.38872, "LON": -117.22951, "NOTES": "ZIP not on listing; filled in (guess, verify)"}, {"EVENT_NAME": "La Costa", "GROUP_ORG": "North County Parkinson's Support Group (NCPSG)", "EVENT_TYPE": "Church", "VENUE_NAME": "Christ Presbyterian Church La Costa", "STREET_ADDRESS": "7807 Centella St", "ZIP_CODE": "92009", "CITY": "Carlsbad", "FREQUENCY_RAW": "First Wednesday of each month, 1pm-3pm", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Wednesday", "WEEK_OF_MONTH": "1st", "TIME_LOCAL": "13:00-15:00", "FORMAT": "In-person", "AUDIENCE": "PwP and care partners", "LANGUAGE": "English", "REGION": "North County", "CONTACT_NAME": "Sam Cooper", "CONTACT_PHONE": "520-820-0339", "LAT": 33.07969, "LON": -117.23905, "NOTES": "ZIP not on listing; filled in (guess, verify)"}, {"EVENT_NAME": "Living in the Solution", "GROUP_ORG": "SD Central County Parkinson's Support Groups", "EVENT_TYPE": "Virtual", "VENUE_NAME": "Zoom", "STREET_ADDRESS": "virtual", "ZIP_CODE": "", "CITY": "", "FREQUENCY_RAW": "Third Wednesday of each month, 1-2:30pm", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Wednesday", "WEEK_OF_MONTH": "3rd", "TIME_LOCAL": "13:00-14:30", "FORMAT": "Virtual", "AUDIENCE": "PwP and care partners", "LANGUAGE": "English", "REGION": "Virtual", "CONTACT_NAME": "Nancy Floodberg", "CONTACT_PHONE": "619-857-6638", "LAT": "", "LON": "", "NOTES": ""}, {"EVENT_NAME": "Oceanside", "GROUP_ORG": "North County Parkinson's Support Group (NCPSG)", "EVENT_TYPE": "Church", "VENUE_NAME": "First Presbyterian Oceanside", "STREET_ADDRESS": "2001 S. El Camino Real", "ZIP_CODE": "92054", "CITY": "Oceanside", "FREQUENCY_RAW": "Second Wednesday of each month, 1pm-3pm", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Wednesday", "WEEK_OF_MONTH": "2nd", "TIME_LOCAL": "13:00-15:00", "FORMAT": "In-person", "AUDIENCE": "PwP and care partners", "LANGUAGE": "English", "REGION": "North County", "CONTACT_NAME": "Paul Dawson", "CONTACT_PHONE": "760-497-1200", "LAT": 33.19201, "LON": -117.32886, "NOTES": "ZIP not on listing; filled in (guess, verify)"}, {"EVENT_NAME": "Parkinson's Care Partners", "GROUP_ORG": "East County Parkinson's Support Group", "EVENT_TYPE": "Virtual", "VENUE_NAME": "Zoom", "STREET_ADDRESS": "virtual", "ZIP_CODE": "", "CITY": "", "FREQUENCY_RAW": "First, second & third Tuesdays of each month, 3-4:30pm", "FREQUENCY_CLEAN": "3x monthly", "DAY_OF_WEEK": "Tuesday", "WEEK_OF_MONTH": "1st, 2nd, 3rd", "TIME_LOCAL": "15:00-16:30", "FORMAT": "Virtual", "AUDIENCE": "Care partners only", "LANGUAGE": "English", "REGION": "Virtual", "CONTACT_NAME": "", "CONTACT_PHONE": "", "LAT": "", "LON": "", "NOTES": "Zoom series on listing says 'until Jan 20, 2026'; may be stale"}, {"EVENT_NAME": "People with Parkinson's", "GROUP_ORG": "SD Central County Parkinson's Support Groups", "EVENT_TYPE": "Virtual", "VENUE_NAME": "Zoom", "STREET_ADDRESS": "virtual", "ZIP_CODE": "", "CITY": "", "FREQUENCY_RAW": "Fourth Wednesday of each month, 3-4:30pm", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Wednesday", "WEEK_OF_MONTH": "4th", "TIME_LOCAL": "15:00-16:30", "FORMAT": "Virtual", "AUDIENCE": "PwP only", "LANGUAGE": "English", "REGION": "Virtual", "CONTACT_NAME": "Jeanie Hebert-Brown", "CONTACT_PHONE": "619-997-1616", "LAT": "", "LON": "", "NOTES": "GROUP_ORG inferred (guess)"}, {"EVENT_NAME": "Point Loma", "GROUP_ORG": "SD Central County Parkinson's Support Groups", "EVENT_TYPE": "Restaurant/cafe", "VENUE_NAME": "Point Loma Cafe", "STREET_ADDRESS": "4865 North Harbor Drive", "ZIP_CODE": "92106", "CITY": "San Diego", "FREQUENCY_RAW": "Fourth Tuesday of each month, 10:00am-12:00pm", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Tuesday", "WEEK_OF_MONTH": "4th", "TIME_LOCAL": "10:00-12:00", "FORMAT": "In-person", "AUDIENCE": "PwP and care partners", "LANGUAGE": "English", "REGION": "Pt. Loma", "CONTACT_NAME": "Dolores Cohenour", "CONTACT_PHONE": "619-560-1935", "LAT": 32.72564, "LON": -117.22258, "NOTES": "Reservations required"}, {"EVENT_NAME": "Poway", "GROUP_ORG": "Poway Support Group Meeting", "EVENT_TYPE": "Virtual", "VENUE_NAME": "Zoom", "STREET_ADDRESS": "virtual", "ZIP_CODE": "", "CITY": "", "FREQUENCY_RAW": "2nd Friday of every month, 3:30-4:30 PM", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Friday", "WEEK_OF_MONTH": "2nd", "TIME_LOCAL": "15:30-16:30", "FORMAT": "Virtual", "AUDIENCE": "Not stated", "LANGUAGE": "English", "REGION": "Virtual", "CONTACT_NAME": "Girija", "CONTACT_PHONE": "", "LAT": "", "LON": "", "NOTES": "Named Poway but meets on Zoom (contact for link)"}, {"EVENT_NAME": "Rancho Bernardo", "GROUP_ORG": "North County Parkinson's Support Group (NCPSG)", "EVENT_TYPE": "Church", "VENUE_NAME": "San Rafael Catholic Church", "STREET_ADDRESS": "17252 Bernardo Center Drive", "ZIP_CODE": "92128", "CITY": "San Diego (Rancho Bernardo)", "FREQUENCY_RAW": "First Monday of each month, 10am-Noon", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Monday", "WEEK_OF_MONTH": "1st", "TIME_LOCAL": "10:00-12:00", "FORMAT": "In-person", "AUDIENCE": "PwP and care partners", "LANGUAGE": "English", "REGION": "North County", "CONTACT_NAME": "Carol Maher", "CONTACT_PHONE": "760-749-8234", "LAT": 33.02697, "LON": -117.07656, "NOTES": "ZIP not on listing; filled in (guess, verify)"}, {"EVENT_NAME": "Santee Lantern Crest Senior Living", "GROUP_ORG": "", "EVENT_TYPE": "Senior living community", "VENUE_NAME": "Lantern Crest Senior Living (The Pointe, 4th floor library)", "STREET_ADDRESS": "800 Lantern Crest Way", "ZIP_CODE": "92071", "CITY": "Santee", "FREQUENCY_RAW": "First Tuesday of the month at 3pm", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Tuesday", "WEEK_OF_MONTH": "1st", "TIME_LOCAL": "15:00", "FORMAT": "In-person", "AUDIENCE": "Not stated", "LANGUAGE": "English", "REGION": "East County", "CONTACT_NAME": "", "CONTACT_PHONE": "619-258-8886", "LAT": 32.8428, "LON": -116.9905, "NOTES": "Coordinates approximate (geocoder found no match). Site tags only 'San Diego – City'; REGION set by us"}, {"EVENT_NAME": "Southwest Riverside County Parkinson's Support Group", "GROUP_ORG": "", "EVENT_TYPE": "Gym", "VENUE_NAME": "LionHeart Gym", "STREET_ADDRESS": "42095 Zevo Drive, Suite 5", "ZIP_CODE": "92590", "CITY": "Temecula", "FREQUENCY_RAW": "3rd Friday of the month at 11:30", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Friday", "WEEK_OF_MONTH": "3rd", "TIME_LOCAL": "11:30", "FORMAT": "In-person", "AUDIENCE": "PwP (all ages)", "LANGUAGE": "English", "REGION": "Riverside County", "CONTACT_NAME": "Steve Steinberg", "CONTACT_PHONE": "951-719-9195", "LAT": 33.51414, "LON": -117.17441, "NOTES": ""}, {"EVENT_NAME": "Speaker Series", "GROUP_ORG": "SD Central County Parkinson's Support Groups", "EVENT_TYPE": "Virtual", "VENUE_NAME": "Zoom", "STREET_ADDRESS": "virtual", "ZIP_CODE": "", "CITY": "", "FREQUENCY_RAW": "Second Wednesday of each month, 3-4:30pm", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Wednesday", "WEEK_OF_MONTH": "2nd", "TIME_LOCAL": "15:00-16:30", "FORMAT": "Virtual", "AUDIENCE": "PwP and care partners", "LANGUAGE": "English", "REGION": "Virtual", "CONTACT_NAME": "Nancy Floodberg", "CONTACT_PHONE": "619-857-6638", "LAT": "", "LON": "", "NOTES": "Speaker presentation, not a discussion group"}, {"EVENT_NAME": "VYALEV / Duopa", "GROUP_ORG": "SD Central County Parkinson's Support Groups", "EVENT_TYPE": "Virtual", "VENUE_NAME": "Zoom", "STREET_ADDRESS": "virtual", "ZIP_CODE": "", "CITY": "", "FREQUENCY_RAW": "Fourth Saturday of first month, quarterly", "FREQUENCY_CLEAN": "Quarterly", "DAY_OF_WEEK": "Saturday", "WEEK_OF_MONTH": "4th", "TIME_LOCAL": "", "FORMAT": "Virtual", "AUDIENCE": "PwP on/considering Vyalev or Duopa, and care partners", "LANGUAGE": "English", "REGION": "Virtual", "CONTACT_NAME": "Nancy Floodberg", "CONTACT_PHONE": "619-857-6638", "LAT": "", "LON": "", "NOTES": "Meeting time not listed"}, {"EVENT_NAME": "Women's Support Group", "GROUP_ORG": "Shake It Up Women's Group", "EVENT_TYPE": "Library", "VENUE_NAME": "Mission Valley Library", "STREET_ADDRESS": "2123 Fenton Parkway", "ZIP_CODE": "92108", "CITY": "San Diego", "FREQUENCY_RAW": "1st Wednesday of the Month 2:00pm", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Wednesday", "WEEK_OF_MONTH": "1st", "TIME_LOCAL": "14:00", "FORMAT": "In-person", "AUDIENCE": "Women with Parkinson's (PwP only)", "LANGUAGE": "English", "REGION": "Central County", "CONTACT_NAME": "Erin Raskin", "CONTACT_PHONE": "214-348-7235", "LAT": 32.77933, "LON": -117.12693, "NOTES": "ZIP not on listing; filled in (guess, verify)"}, {"EVENT_NAME": "YOPD Care Partners", "GROUP_ORG": "", "EVENT_TYPE": "Virtual", "VENUE_NAME": "Zoom", "STREET_ADDRESS": "virtual", "ZIP_CODE": "", "CITY": "", "FREQUENCY_RAW": "2nd Tuesday 6:00 pm-7:30", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "Tuesday", "WEEK_OF_MONTH": "2nd", "TIME_LOCAL": "18:00-19:30", "FORMAT": "Virtual", "AUDIENCE": "Care partners of young-onset PwP (diagnosed before 50)", "LANGUAGE": "English", "REGION": "Virtual", "CONTACT_NAME": "Steve Steinberg", "CONTACT_PHONE": "951-719-9195", "LAT": "", "LON": "", "NOTES": ""}, {"EVENT_NAME": "Young Onset Support Group", "GROUP_ORG": "", "EVENT_TYPE": "Virtual", "VENUE_NAME": "Zoom", "STREET_ADDRESS": "virtual", "ZIP_CODE": "", "CITY": "", "FREQUENCY_RAW": "Virtual, Meetings are Monthly", "FREQUENCY_CLEAN": "Monthly", "DAY_OF_WEEK": "", "WEEK_OF_MONTH": "", "TIME_LOCAL": "", "FORMAT": "Virtual", "AUDIENCE": "Young-onset PwP", "LANGUAGE": "English", "REGION": "Virtual", "CONTACT_NAME": "Steve Steinberg", "CONTACT_PHONE": "951-719-9195", "LAT": "", "LON": "", "NOTES": "Day/time not listed"}];
+const B={n:33.55,s:32.52,w:-117.62,e:-116.75}, W=600,H=620;
+const px=(lat,lon)=>[ (lon-B.w)/(B.e-B.w)*W, (B.n-lat)/(B.n-B.s)*H ];
+const coast=[[33.55,-117.62],[33.43,-117.61],[33.33,-117.50],[33.20,-117.39],[33.13,-117.33],[33.04,-117.295],[32.96,-117.27],[32.87,-117.255],[32.84,-117.28],[32.80,-117.26],[32.75,-117.25],[32.70,-117.255],[32.67,-117.24],[32.70,-117.21],[32.72,-117.19],[32.69,-117.15],[32.62,-117.12],[32.58,-117.13],[32.534,-117.124]];
+const svg=document.getElementById('map'), NS='http://www.w3.org/2000/svg';
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e}
+const land=coast.map(c=>px(...c));
+land.push(px(32.534,-116.75),px(33.55,-116.75));
+el('polygon',{points:land.map(p=>p.join(',')).join(' '),fill:'var(--land)',stroke:'var(--line)','stroke-width':2});
+const border=[px(32.534,-117.124),px(32.534,-116.75)];
+el('line',{x1:border[0][0],y1:border[0][1],x2:border[1][0],y2:border[1][1],stroke:'var(--muted)','stroke-dasharray':'6 6'});
+[['Riverside Co.',33.50,-117.05],['North County',33.22,-117.10],['Central',32.82,-117.05],['East County',32.86,-116.88],['South Bay',32.60,-116.98],['Pacific Ocean',32.95,-117.52],['Mexico',32.525,-116.95]].forEach(([t,a,o])=>{const [x,y]=px(a,o);const tx=el('text',{x,y,'text-anchor':'middle',fill:'var(--muted)','font-size':15,'font-family':'Lexend, sans-serif'});tx.textContent=t});
+const rl=px(33.43,-117.61);el('line',{x1:rl[0],y1:rl[1],x2:W,y2:px(33.43,-116.75)[1],stroke:'var(--muted)','stroke-dasharray':'2 6'});
+const REG=['All','North County','Central County','East County','South Bay','Pt. Loma','Riverside County','Virtual'];
+const DAYS=['Any day','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const AUD=['Everyone','People with PD','Care partners','Young onset','Spanish'];
+const st={r:'All',d:'Any day',a:'Everyone'};
+function audOk(x,a){const s=(x.AUDIENCE+' '+x.EVENT_NAME).toLowerCase();
+  if(a==='Everyone')return true; if(a==='People with PD')return !/care partners only/.test(s)&&!/^care partners/.test(x.AUDIENCE.toLowerCase());
+  if(a==='Care partners')return /care partner|caregiver/.test(s); if(a==='Young onset')return /young|yopd/.test(s); if(a==='Spanish')return x.LANGUAGE==='Spanish';}
+function chips(id,opts,key){const g=document.getElementById(id);opts.forEach(o=>{const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=o;b.setAttribute('aria-pressed',st[key]===o);b.onclick=()=>{st[key]=o;g.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c===b));render()};g.appendChild(b)})}
+chips('f-region',REG,'r');chips('f-day',DAYS,'d');chips('f-aud',AUD,'a');
+const dots=el('g',{});
+function when(x){return x.FREQUENCY_CLEAN==='TBD'?'Schedule to be confirmed':x.FREQUENCY_RAW}
+function render(){
+  const rows=DATA.filter(x=>(st.r==='All'||x.REGION===st.r)&&(st.d==='Any day'||x.DAY_OF_WEEK===st.d)&&audOk(x,st.a));
+  document.getElementById('count').textContent=rows.length+' of '+DATA.length+' groups';
+  const L=document.getElementById('list');L.innerHTML='';dots.innerHTML='';
+  rows.forEach((x,i)=>{const isNew=x.FREQUENCY_CLEAN==='TBD';
+    const c=document.createElement('article');c.className='card';c.tabIndex=0;c.id='g'+i;
+    const where=x.FORMAT==='Virtual'?'Online (Zoom)':[x.VENUE_NAME,x.STREET_ADDRESS,[x.CITY,x.ZIP_CODE].filter(Boolean).join(' ')].join(', ');
+    c.innerHTML=`<div>${isNew?'<span class="pill n">New</span>':''}<span class="pill ${x.FORMAT==='Virtual'?'v':'p'}">${x.FORMAT}</span><span class="pill p">${x.FREQUENCY_CLEAN}</span>${x.LANGUAGE==='Spanish'?'<span class="pill p">Español</span>':''}</div>
+    <h3></h3><div class="when"></div><div class="meta where"></div><div class="meta aud"></div><div class="meta con"></div>${x.NOTES?'<div class="notes"></div>':''}`;
+    c.querySelector('h3').textContent=x.EVENT_NAME+(x.GROUP_ORG?' · '+x.GROUP_ORG:'');
+    c.querySelector('.when').textContent=when(x);c.querySelector('.where').textContent=where;
+    c.querySelector('.aud').textContent='For: '+x.AUDIENCE;
+    c.querySelector('.con').textContent=[x.CONTACT_NAME,x.CONTACT_PHONE].filter(Boolean).join(' · ')||'';
+    if(x.NOTES)c.querySelector('.notes').textContent='Data note: '+x.NOTES;
+    L.appendChild(c);
+    if(x.LAT!==''){const [cx,cy]=px(+x.LAT,+x.LON);const d=el('circle',{cx,cy,r:11,fill:isNew?'var(--new)':'var(--accent)',stroke:'var(--surface)','stroke-width':3,class:'dot',tabindex:0},dots);
+      const t=el('title',{},d);t.textContent=x.EVENT_NAME;
+      const go=()=>{document.querySelectorAll('.card').forEach(k=>k.classList.remove('hl'));c.classList.add('hl');c.scrollIntoView({block:'nearest',behavior:'smooth'});c.focus({preventScroll:true})};
+      d.addEventListener('click',go);d.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}});}
+  });
+}
+render();
+</script>
